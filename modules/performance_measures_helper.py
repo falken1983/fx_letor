@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import pandas as pd
 import numpy as np
+import riskfolio.RiskFunctions as rf
 
 scalers = {
     "daily": 252,
@@ -50,7 +51,17 @@ def leon_sk_ratio(y):
 #Quantile Related 
 #VaR Ratio
 def var_ratio(y, quant=0.05):
-    return y.quantile(q=1-quant)/y.quantile(q=quant)
+    ratio=y.quantile(q=1-quant)/y.quantile(q=quant)
+    return np.abs(ratio)
+
+# riskfolio.RiskFunctions efficient implementations
+def rf_var_ratio(y, alpha=0.05):
+    varratio = rf.VaR_Hist(y,1-alpha)/rf.VaR_Hist(y,alpha) 
+    return varratio
+
+def rachev_ratio(y, alpha=0.05):
+    rratio = rf.CVaR_Hist(y,1-alpha)/rf.CVaR_Hist(y,alpha)
+    return rratio
 
 """ 
 Functions for Compouding Returns
