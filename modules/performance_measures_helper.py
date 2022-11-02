@@ -63,6 +63,23 @@ def rachev_ratio(y, alpha=0.05):
     rratio = rf.CVaR_Hist(y,1-alpha)/rf.CVaR_Hist(y,alpha)
     return rratio
 
+#LPMs/UPMs related
+# Modified Sortino ratio 
+def leon_sortino_ratio(y, freq="daily"):    
+    """
+    Leon Trick for the Sortino Ratio
+    """
+    if y.mean()<0:
+        return np.power(scalers[freq],1.5) *(y.mean()*rf.LPM(y,MAR=0,p=2))
+    else:
+        return np.sqrt(scalers[freq])*y.mean()/rf.LPM(y,MAR=0,p=2)
+
+def omega_ratio(y):
+    """
+    Omega Ratio 
+    """
+    return 1+y.mean()/rf.LPM(y,MAR=0,p=1)
+
 """ 
 Functions for Compouding Returns
 """
