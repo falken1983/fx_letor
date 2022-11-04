@@ -50,7 +50,7 @@ We are working on expanding the coverage of the repo. Areas under active develop
       * XGBRanker (Pairwise LETOR)
       * LambdaMART (LightGBM Pairwise LETOR)
       
-  * Backtesting And Conclusions: Empirical evidence supporting Equity Screening methodologies based on LTR Algos.
+  * Backtesting And Conclusions: Empirical evidence supporting Currency Screening methodologies based on LETOR Algos.
   * Frontend:
       * `streamlit`-based Financial KID (Key Information Dashboard)
 
