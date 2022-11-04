@@ -1,5 +1,5 @@
 # fx_letor
-LEarning TO Rank Currency Investments
+**LE**arning **TO** **R**ank Currency Investments
 
 ## Table of contents
 1. [Introduction](#introduction)
