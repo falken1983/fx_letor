@@ -22,4 +22,5 @@ qdldl==0.1.5.post2
 riskfolio-lib==3.3.0
 scs
 stevedore
-yfinance==0.1.74
+yfinance==0.1.87
+matplotlib==3.5.2
