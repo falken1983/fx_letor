@@ -28,3 +28,4 @@ channels:
     - scs==3.2.0
     - stevedore==4.1.0
     - yfinance==0.1.74
+    - matplotlib==3.5.2
