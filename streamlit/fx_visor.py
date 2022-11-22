@@ -14,10 +14,13 @@ from datetime import datetime, timedelta
 plt.style.use("fast")
 PATH_STREAMLIT_APP = os.getcwd() + "/"
 # Load configfile with currencies supported (for mem control)
-with open(PATH_STREAMLIT_APP + "config.yaml","r") as configfile:
+#with open(PATH_STREAMLIT_APP + "config.yaml","r") as configfile:
+#    cfg=yaml.safe_load(configfile)
+
+with open("./config.yaml","r") as configfile:
     cfg=yaml.safe_load(configfile)
 
-# fx_visor alpha supports G11 currencies
+    # fx_visor alpha supports G11 currencies
 with st.sidebar:
     #st.title("Control Panel")
     symbols = st.multiselect(
