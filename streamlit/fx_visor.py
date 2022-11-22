@@ -65,11 +65,17 @@ with st.sidebar:
             value = datetime.strptime(ts_max.strftime('%Y-%m-%d'), '%Y-%m-%d')
         )
 
-        refreshed= st.form_submit_button("Refresh! :money_with_wings:")
+        refreshed= st.form_submit_button("Submit")
+
+    if refreshed:
+        st.success("Succesfully Updated",icon="💸")
+    else:
+        st.warning("Awaiting Submit Button...",icon="⌛")
 
     st.title ("FX-Portfolio Allocation")
     opciones = st.radio('Choose Currency blending scheme:', ['Equally Weighted', 'Inverse-Volatility Weighted'])
     ew = False
+
     if opciones == "Equally Weighted":
         ew = True
     else:
@@ -80,15 +86,15 @@ with st.sidebar:
             step=0.25,
             value=5.0
             )
-    
         st.write(f'Current portfolio volatility is set to {target_vol}%')
-        target_vol /= 100
+        target_vol /= 100            
 
+# Common DataFrames
 norm_fx_px = 10000*fx_prices[start_date:end_date][symbols]/fx_prices[start_date:end_date][symbols].iloc[0,:]
 fx_px = fx_prices[start_date:end_date][symbols]
 
+# Main Layout
 st.header("FX Visor")
-
 tab1, tab2 = st.tabs(["Nondiversified", "Diversified"])
 
 with tab1:
@@ -106,22 +112,18 @@ with tab1:
         # st decorations
         st.markdown("#### Hypothetical Growth of 10,000€")
         st.write("Individual (nondiversified) growth for each currency chosen.")
-        st.pyplot(fig)
+        st.pyplot(fig)        
 
 with tab2:
-    st.header("Diversified")
-    #st.write("`bla bla bla`")       
-    
+    st.header("Diversified")    
     col1, col2 = st.columns([3,1])
     
-    if refreshed:
+    if refreshed:  
+        st.balloons()      
         # Solomonic Blending
         fx_port_cumret = 10000*(1+norm_fx_px.pct_change().mean(axis=1)).cumprod()        
-
-        fig, ax = plt.subplots()
-        
-        if ew:                       
-        
+        fig, ax = plt.subplots()        
+        if ew:                               
             with col1:                
                 # EW Blending
                 ax.plot(norm_fx_px, alpha=0.15)
@@ -130,29 +132,20 @@ with tab2:
                 ax.xaxis.set_major_formatter(DateFormatter('%Y-%b'))
                 ax.set_ylabel("Cumulative Wealth (€)")
                 plt.grid(visible=True, axis='y')
-                #ax.legend(symbols, frameon=False)
-            
-                st.markdown("#### Hypothetical Growth of 10,000€")            
-                #st.markdown(f"{opciones} Portfolio is composed by {symbols[0]}")
-
+                            
+                st.markdown("#### Hypothetical Growth of 10,000€")                            
                 curncy_components = f'{", ".join(symbols)}'            
                 st.markdown(f"{opciones} Portfolio composed by " + curncy_components)
-                st.pyplot(fig)
-        
-            with col2:
-                #running_year = fx_px.index[-1].year
-                #st.markdown(f"#### {running_year} Total Return")                
+                st.pyplot(fig)        
+            with col2:                
                 st.markdown(f"#### Total Return")
                 st.metric(
                     label="Net Gains",
                     value=f"{fx_port_cumret.iloc[-1]-10000:.2f}€",
                     delta=f"{100*(1e-4*fx_port_cumret.iloc[-1]-1):.1f}%"
-                )
-        
-        else:            
-
-            with col1:                
-                # Invers-Vol Blending
+                )        
+        else:   # Invers-Vol Blending                     
+            with col1:                                
                 target_vol/=np.sqrt(252)
                 factors = target_vol/fx_px.pct_change().std()
                 factors[factors>1]=1 #DKK patology (pegged to EUR). It acts as a risk-free currency ~EUR
@@ -169,15 +162,10 @@ with tab2:
                 ax.legend(frameon=False)
             
                 st.markdown("#### Hypothetical Growth of 10,000€")                            
-
                 curncy_components = f'{", ".join(symbols)}'            
                 st.markdown(f"{opciones} Portfolio composed by " + curncy_components)
                 st.pyplot(fig)
-
-            with col2:
-                #running_year = fx_px.index[-1].year
-                #st.markdown(f"#### {running_year} Total Return")
-                
+            with col2:                
                 st.markdown(f"#### Total Return")
                 st.metric(
                     label="Net Gains",
@@ -185,10 +173,9 @@ with tab2:
                     delta=f"{100*(1e-4*fx_iv_port_cumret.iloc[-1]-1):.1f}%"
                 )
                 
-                st.markdown("#### Distribution")
-                iv_weights = 10000*factors.to_frame(name="Base Currency (€)")
-                iv_weights /= iv_weights.shape[0]
-                #iv_weights["Foreign Currency Units"] = iv_weights/fx_px.iloc[-1]
+                st.markdown("#### Distribution")                                
+                iv_weights = 10000*factors.to_frame(name="Allocation")
+                iv_weights /= iv_weights.shape[0]                                                
                 st.dataframe(
-                    iv_weights.style.highlight_max(axis=0),             
+                    iv_weights.style.format({"Allocation": "{:.0f}€"}),             
                 )
