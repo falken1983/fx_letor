@@ -12,15 +12,19 @@ import yaml
 from datetime import datetime, timedelta
 
 plt.style.use("fast")
-PATH_STREAMLIT_APP = os.getcwd() + "/"
-# Load configfile with currencies supported (for mem control)
-#with open(PATH_STREAMLIT_APP + "config.yaml","r") as configfile:
-#    cfg=yaml.safe_load(configfile)
 
-with open("./config.yaml","r") as configfile:
-    cfg=yaml.safe_load(configfile)
+PATH_STREAMLIT_APP = "/app/fx_letor/streamlit/"
+CONFIG_FILE = "config.yaml"
+FULLPATH_CONFIG_FILE = PATH_STREAMLIT_APP + CONFIG_FILE
 
-    # fx_visor alpha supports G11 currencies
+try:
+    with open(FULLPATH_CONFIG_FILE,"r") as configfile:
+        cfg=yaml.safe_load(configfile)
+except:
+    with open(CONFIG_FILE,"r") as configfile:
+        cfg=yaml.safe_load(configfile)
+
+# fx_visor alpha supports G11 currencies
 with st.sidebar:
     #st.title("Control Panel")
     symbols = st.multiselect(
