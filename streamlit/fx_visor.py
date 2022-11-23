@@ -50,27 +50,20 @@ ts_min, ts_max = fx_prices.index[0], fx_prices.index[-1]
 # control panel
 with st.sidebar:
     
-    with st.form("refresh"):
-        start_date = st.date_input( # start date 
+    start_date = st.date_input( # start date 
         "Choose Start Date:",
         min_value = datetime.strptime(ts_min.strftime('%Y-%m-%d'), '%Y-%m-%d'),
         max_value = datetime.strptime(ts_max.strftime('%Y-%m-%d'), '%Y-%m-%d'),        
         value = datetime.strptime(ts_min.strftime('%Y-%m-%d'), '%Y-%m-%d')
         )
 
-        end_date = st.date_input( # end date
-            "Choose End Date:",
-            min_value = start_date,
-            max_value = datetime.strptime(ts_max.strftime('%Y-%m-%d'), '%Y-%m-%d'),        
-            value = datetime.strptime(ts_max.strftime('%Y-%m-%d'), '%Y-%m-%d')
-        )
-
-        refreshed= st.form_submit_button("Submit")
-
-    if refreshed:
-        st.success("Succesfully Updated",icon="💸")
-    else:
-        st.warning("Awaiting Submit Button...",icon="⌛")
+    end_date = st.date_input( # end date
+        "Choose End Date:",
+        min_value = start_date,
+        max_value = datetime.strptime(ts_max.strftime('%Y-%m-%d'), '%Y-%m-%d'),        
+        value = datetime.strptime(ts_max.strftime('%Y-%m-%d'), '%Y-%m-%d')
+    )        
+    #refreshed = False        
 
     st.title ("FX-Portfolio Allocation")
     opciones = st.radio('Choose Currency blending scheme:', ['Equally Weighted', 'Inverse-Volatility Weighted'])
@@ -89,6 +82,15 @@ with st.sidebar:
         st.write(f'Current portfolio volatility is set to {target_vol}%')
         target_vol /= 100            
 
+    with st.form("refresh"):
+        #st.title("Run FX Dashboard")               
+        refreshed= st.form_submit_button("Submit Changes")
+        
+    if refreshed:            
+        st.success("Succesfully Updated",icon="💸")
+    else:
+        st.warning("Awaiting Submit Button...",icon="⌛")
+        
 # Common DataFrames
 norm_fx_px = 10000*fx_prices[start_date:end_date][symbols]/fx_prices[start_date:end_date][symbols].iloc[0,:]
 fx_px = fx_prices[start_date:end_date][symbols]
