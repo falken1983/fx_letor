@@ -65,7 +65,7 @@ with st.sidebar:
     )        
     #refreshed = False        
 
-    st.title ("FX-Portfolio Allocation")
+    st.title ("FX-Portfolio Diversification")
     opciones = st.radio('Choose Currency blending scheme:', ['Equally Weighted', 'Inverse-Volatility Weighted'])
     ew = False
 
@@ -96,7 +96,7 @@ norm_fx_px = 10000*fx_prices[start_date:end_date][symbols]/fx_prices[start_date:
 fx_px = fx_prices[start_date:end_date][symbols]
 
 # Main Layout
-st.header("FX Visor")
+st.header("📈 FX Visor")
 tab1, tab2 = st.tabs(["Nondiversified", "Diversified"])
 
 with tab1:
