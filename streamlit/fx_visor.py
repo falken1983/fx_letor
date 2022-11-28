@@ -5,6 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib.dates import DateFormatter
+import time
 
 import yfinance as yf
 import yaml
@@ -24,21 +25,21 @@ except:
     with open(CONFIG_FILE,"r") as configfile:
         cfg=yaml.safe_load(configfile)
 
-# fx_visor alpha supports G11 currencies
-with st.sidebar:
-    #st.title("Control Panel")
-    symbols = st.multiselect(
-        label="Please Choose Currency:",
-        options=cfg["currencies"]["G11"],
-        default="USD"
-    )
+countries = list()
+for land in cfg["currencies"].keys():
+    countries.extend(cfg["currencies"][land])
 
-tickers = ["EUR"+currency+"=X" for currency in cfg["currencies"]["G11"]]
+tickers = ["EUR"+currency+"=X" for currency in countries]
 
-#st.cache??? (caching prices wrt base currency €)
+# caching full-data for optimized responsiveness
 @st.cache
 def fetch_and_clean(tickers):
     return 1/yf.download(tickers)["Close"].dropna(how="any")
+
+# A convenient way for rendering decorators and enhancing effects
+def rendering():
+    with st.spinner("Rendering..."):
+        time.sleep(0.25)
 
 #adhoc renaming for plotting
 fx_prices = fetch_and_clean(tickers)
@@ -50,6 +51,13 @@ ts_min, ts_max = fx_prices.index[0], fx_prices.index[-1]
 # control panel
 with st.sidebar:
     
+    #st.title("Control Panel")
+    symbols = st.multiselect(
+        label="Please Choose Currency:",
+        options=countries,
+        default="USD"
+    )
+
     start_date = st.date_input( # start date 
         "Choose Start Date:",
         min_value = datetime.strptime(ts_min.strftime('%Y-%m-%d'), '%Y-%m-%d'),
@@ -83,7 +91,7 @@ with st.sidebar:
         target_vol /= 100            
 
     with st.form("refresh"):
-        #st.title("Run FX Dashboard")               
+        #st.title("Run FX Dashboard")          
         refreshed= st.form_submit_button("Submit Changes")
         
     if refreshed:            
@@ -102,7 +110,8 @@ tab1, tab2 = st.tabs(["Nondiversified", "Diversified"])
 with tab1:
     st.header("Nondiversified")    
 
-    if refreshed:        
+    if refreshed:
+        rendering()
         fig, ax = plt.subplots()
         ax.plot(norm_fx_px)
         #ax.plot(sdata_yearacum[cities])
@@ -120,11 +129,11 @@ with tab2:
     st.header("Diversified")    
     col1, col2 = st.columns([3,1])
     
-    if refreshed:  
-        st.balloons()      
+    if refreshed:          
         # Solomonic Blending
         fx_port_cumret = 10000*(1+norm_fx_px.pct_change().mean(axis=1)).cumprod()        
         fig, ax = plt.subplots()        
+        rendering()
         if ew:                               
             with col1:                
                 # EW Blending
