@@ -1,0 +1,6 @@
+currencies:
+    G11: ['AUD','CAD','JPY','NZD','NOK','GBP','SEK','CHF','USD','DKK']
+    CEEMEA: ['RUB','TRY']
+    Africa: ['ZAR']
+    EM_Asia: ['HKD','INR','SGD','TWD','CNY']
+    EM_Latam: ['BRL','MXN']

@@ -1,0 +1,11 @@
+{
+    "https://api.shinyapps.io": {
+        "server_url": "https://api.shinyapps.io",
+        "filename": "/home/hcf/source/Python/fx_letor/shiny",
+        "app_url": "https://falken1983.shinyapps.io/fx_shinyvisor/",
+        "app_id": 7763615,
+        "app_guid": null,
+        "title": "fx_shinyvisor",
+        "app_mode": "python-shiny"
+    }
+}
