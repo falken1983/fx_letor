@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 
 CONFIG_FILE = "./config.yaml"
 
+# static fun
 def config():
         with open(CONFIG_FILE,"r") as configfile:
             cfg=yaml.safe_load(configfile)
@@ -25,8 +26,6 @@ def config():
             countries.extend(cfg["currencies"][land])
 
         return countries
-
-#return ["EUR"+currency+"=X" for currency in countries]
 
 app_ui = ui.page_fluid(
     # Title
@@ -61,10 +60,10 @@ app_ui = ui.page_fluid(
             ui.navset_pill(
                 ui.nav(
                     "Nondiversified",
-                    ui.h2("Nondiversified"),
+                    ui.h3("Nondiversified"),
                     ui.markdown(
                         """ 
-                        #### Hypothetical Growth of 10,000€
+                        ##### Hypothetical Growth of 10,000€
                         Individual (nondiversified) growth for each currency chosen.
                         """
                     ),
@@ -72,9 +71,26 @@ app_ui = ui.page_fluid(
                 ),
                 ui.nav(
                     "Diversified",
-                    ui.h2("Diversified"),
-                    ui.output_ui("text_div"),
-                    ui.output_plot("plot_div")
+                    ui.row(
+                        ui.column(9,
+                            ui.h3("Diversified"),
+                            ui.output_ui("text_div"),
+                            ui.output_plot("plot_div")
+                        ),
+                        ui.column(3,
+                            ui.h3("Distribution"),
+                            ui.output_plot("pie_alloc_div"),
+                            ui.output_table("alloc_div")                            
+                        )
+                    ),
+                    ui.row(
+                        ui.column(3,
+                            ui.markdown("__Holi!__")
+                        )
+                    )
+                ),
+                ui.nav(
+                    "Volatility Risk",                    
                 )            
             )
         )
@@ -83,6 +99,11 @@ app_ui = ui.page_fluid(
 
 def server(input, output, session):
     
+    type = {
+            "ew": "Equally Weighted",
+            "iv": "Inverse-Volatility Weighted",
+        }
+
     @reactive.Calc
     def fetch_and_clean():                
         tickers = ["EUR"+currency+"=X" for currency in input.symbols()]        
@@ -112,42 +133,51 @@ def server(input, output, session):
             weekstart=1,
             language="gb"
         )       
-        
+
+    # The Slicers Block
+    @reactive.Calc
+    def raw_px():                
+        start_date = input.date_range()[0]
+        end_date = input.date_range()[1]
+        return fetch_and_clean()[start_date:end_date]
+
+    @reactive.Calc
+    def normalized_px():                
+        fx_prices = raw_px()        
+        return 10000*fx_prices/fx_prices.iloc[0,:] 
+
+    # The Portfolio/Allocations Block (ew is trivial)
+    @reactive.Calc
+    def ew_port_cumret():
+        return 10000*(1+normalized_px().pct_change().fillna(0).mean(axis=1)).cumprod()
+
+    @reactive.Calc
+    def iv_factor_weigths():
+        vol_targetting = 0.01*input.port_vol()
+        vol_targetting/=np.sqrt(252)
+        factors = vol_targetting/raw_px().pct_change().std()
+        factors[factors>1]=1 #DKK patology (pegged to EUR). It acts as a risk-free currency ~EUR
+        return factors
+
+    @reactive.Calc
+    def iv_port_cumret():        
+        weighted_returns = iv_factor_weigths().values.reshape(-1,1).T*raw_px().pct_change().fillna(0)
+        return 10000*(1+weighted_returns.mean(axis=1)).cumprod()
+    
     @output
     @render.plot
     @reactive.event(input.go)
     def plot_undiv():
 
-        start_date = input.date_range()[0]
-        end_date = input.date_range()[1]
-
-        fx_prices = fetch_and_clean()[start_date:end_date]        
-        norm_fx_px = 10000*fx_prices/fx_prices.iloc[0,:]        
-
         _, ax = plt.subplots()        
         
-        ax.plot(norm_fx_px)
+        ax.plot(normalized_px())
         plt.tick_params(rotation=45)
         ax.xaxis.set_major_formatter(DateFormatter('%Y-%b'))
         ax.set_ylabel("Cumulative Wealth (€)")
-        ax.legend(norm_fx_px.columns.tolist(),frameon=False)
+        ax.legend(normalized_px().columns.tolist(),frameon=False)
         plt.grid(visible=True, axis='y')         
-   
-    @output
-    @render.ui
-    def text_div():
-        curncies = input.symbols()
-        type = {
-            "ew": "Equally Weighted",
-            "iv": "Inverse-Volatility Weighted",
-        }
-        return ui.markdown(
-            f"""
-            #### Hypothetical Growth of 10,000€ 
-            {type[input.blending_type()]} Portfolio composed by {', '.join(curncies)}
-            """
-        )
-
+       
     @output
     @render.ui
     @reactive.event(input.blending_type)
@@ -174,50 +204,85 @@ def server(input, output, session):
             Current portfolio volatility set to {input.port_vol():.1f}%
             """
         )
-        else:
-            return None
-
+    
     @output
     @render.ui
-    def refresh():
-        pass
+    def text_div():
+        curncies = input.symbols()
+        
+        return ui.markdown(
+            f"""
+            ##### Hypothetical Growth of 10,000€ 
+            {type[input.blending_type()]} Portfolio composed by {', '.join(curncies)}
+            """
+        )
 
     @output
     @render.plot
     @reactive.event(input.go)
-    def plot_div():
-
-        start_date = input.date_range()[0]
-        end_date = input.date_range()[1]
-
-        fx_prices = fetch_and_clean()[start_date:end_date]        
-        norm_fx_px = 10000*fx_prices/fx_prices.iloc[0,:]        
-        fx_port_cumret = 10000*(1+norm_fx_px.pct_change().mean(axis=1)).cumprod()
+    def plot_div():        
 
         _, ax = plt.subplots()                       
 
         if input.blending_type()=="ew":
-            ax.plot(norm_fx_px, alpha=0.15)
-            ax.plot(fx_port_cumret, color="black")
-            plt.tick_params(rotation=45)
-            ax.xaxis.set_major_formatter(DateFormatter('%Y-%b'))
-            ax.set_ylabel("Cumulative Wealth (€)")
-            plt.grid(visible=True, axis='y')            
-        else:
-            vol_targetting = 0.01*input.port_vol()
-            vol_targetting/=np.sqrt(252)
-            factors = vol_targetting/fx_prices.pct_change().std()
-            factors[factors>1]=1 #DKK patology (pegged to EUR). It acts as a risk-free currency ~EUR
-            weighted_returns = factors.values.reshape(-1,1).T*fx_prices.pct_change()
-            fx_iv_port_cumret = 10000*(1+weighted_returns.mean(axis=1)).cumprod()
+            ax.plot(normalized_px(), alpha=0.15)
+            ax.plot(ew_port_cumret(), color="black")        
+        else:            
+            ax.plot(normalized_px(), alpha=0.075)
+            ax.plot(ew_port_cumret(), color="black", linestyle="dashdot", alpha=0.36, label="Equally Weighted")
+            ax.plot(iv_port_cumret(), color="black", label="Volatility Targetting")            
+            ax.legend(frameon=False)        
+        
+        plt.tick_params(rotation=45)
+        ax.xaxis.set_major_formatter(DateFormatter('%Y-%b'))
+        ax.set_ylabel("Cumulative Wealth (€)")
+        plt.grid(visible=True, axis='y')
 
-            ax.plot(norm_fx_px, alpha=0.075)
-            ax.plot(fx_port_cumret, color="gray", linestyle="dotted", alpha=0.45, label="Equally Weighted")
-            ax.plot(fx_iv_port_cumret, color="black", label="Volatility Targetting")
-            plt.tick_params(rotation=45)
-            ax.xaxis.set_major_formatter(DateFormatter('%Y-%b'))
-            ax.set_ylabel("Cumulative Wealth (€)")
-            plt.grid(visible=True, axis='y')
-            ax.legend(frameon=False)
+    @output
+    @render.table
+    @reactive.event(input.go)
+    def alloc_div():
+        iv_weights = 10000*iv_factor_weigths().to_frame(name="Allocation")
+        iv_weights /= iv_weights.shape[0]
+        
+        if input.blending_type()=="iv":
+            return (
+                iv_weights    
+                .reset_index()            
+                .rename(columns={"index": "Currency"})
+                .style
+                .set_table_attributes(
+                    'class="dataframe shiny-table table w-auto"'
+                )
+                .format({"Allocation": "{:.0f}€"})
+                .hide(axis="index")          
+                .highlight_min(subset="Allocation",color="orange")
+                .highlight_max(subset="Allocation",color="green")              
+            )
+        return None
+
+    @output
+    @render.plot
+    @reactive.event(input.go)
+    def pie_alloc_div():
+        omega=iv_factor_weigths()
+        y_fx = omega.values/len(omega)
+        y = np.append(y_fx,1-np.sum(y_fx))
+        
+        curncies = omega.index.to_list()
+        curncies.extend(["EUR"])              
+
+        _, ax = plt.subplots(figsize=(10,7))
+
+        explode_ = [0]*len(curncies)
+        explode_[-1] = 0.1
+
+        ax.pie(y,
+            labels=curncies,
+            autopct="%1.1f%%",
+            explode=explode_,
+            shadow=True,            
+        )
+        ax.set_title("Volatility Targetting Portfolio Components")
 
 app = App(app_ui, server)
