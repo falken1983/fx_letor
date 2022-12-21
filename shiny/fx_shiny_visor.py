@@ -11,6 +11,8 @@ import time
 import yfinance as yf
 import yaml
 
+from pathlib import Path
+
 from datetime import datetime, timedelta
 
 CONFIG_FILE = "./config.yaml"
@@ -39,10 +41,18 @@ app_ui = ui.page_fluid(
             "symbols",
             "Pick Currencies",
             choices=config(),
+            selected=["USD","CHF"],
             multiple=True,
-            selectize=True
+            selectize=True,
+            width="65%"
+
         ),
         ui.output_ui("range_date_picker"),  
+        ui.input_switch(
+            "lock_dates",
+            "Lock Date Window",
+            value=True
+        ),
         ui.h4("FX-Portfolio Diversification"),
         ui.input_radio_buttons(
             id="blending_type",
@@ -50,48 +60,66 @@ app_ui = ui.page_fluid(
             choices={
                 "ew": "Equally Weighted",
                 "iv": "Inverse-Volatility Weighted"
-            }
+            },
+            selected="iv",
+            inline=True
         ),
         ui.output_ui("target_vol"),                          
         ui.output_ui("target_vol_text"),
-        ui.input_action_button("go", "Submit Changes", class_="btn-success")
+        #ui.input_action_button("go", "Submit Changes", class_="btn-success")
         ),
         ui.panel_main(
-            ui.navset_pill(
-                ui.nav(
-                    "Nondiversified",
-                    ui.h3("Nondiversified"),
-                    ui.markdown(
-                        """ 
-                        ##### Hypothetical Growth of 10,000€
-                        Individual (nondiversified) growth for each currency chosen.
-                        """
-                    ),
-                    ui.output_plot("plot_undiv")
-                ),
-                ui.nav(
-                    "Diversified",
-                    ui.row(
-                        ui.column(9,
-                            ui.h3("Diversified"),
-                            ui.output_ui("text_div"),
-                            ui.output_plot("plot_div")
+            ui.page_navbar(                
+                ui.nav_menu(
+                    "Dynamic Analysis of Returns",
+                    ui.nav(
+                        "Nondiversified",
+                        ui.h3("Chart of Total Return"),
+                        ui.markdown(
+                            """ 
+                            ##### Hypothetical Growth of 10,000€
+                            Individual (nondiversified) growth for each currency chosen.
+                            """
                         ),
-                        ui.column(3,
-                            ui.h3("Distribution"),
-                            ui.output_plot("pie_alloc_div"),
-                            ui.output_table("alloc_div")                            
-                        )
+                        ui.output_plot("plot_undiv")
                     ),
-                    ui.row(
-                        ui.column(3,
-                            ui.markdown("__Holi!__")
+                    ui.nav(
+                        "Diversified",
+                        ui.row(
+                            ui.column(8,
+                                ui.h3("Chart of Total Return"),
+                                ui.output_ui("text_div"),
+                                ui.output_plot("plot_div")
+                            ),
+                            ui.column(4,
+                                ui.h3("Distribution"),                            
+                                ui.output_table("alloc_div")                            
+                            )
+                        ),
+                        ui.row(
+                            ui.column(6,
+                                ui.h4("Positions Disclosure"),
+                                ui.markdown(
+                                    """  
+                                    EUR position distinct of zero reflects portion of the initial investment allocated to the risk-free currency wrt to the relevant risk factor.
+                                    """
+                                ),                           
+                                ui.output_plot("pie_alloc_div"),                            
+                            )
                         )
-                    )
+                    )   
                 ),
                 ui.nav(
                     "Volatility Risk",                    
-                )            
+                ),
+                ui.nav_spacer(),
+                ui.nav_control(
+                    ui.a(
+                        "FX LETOR",
+                        href="https://github.com/falken1983/fx_letor",
+                        target='_blank'
+                    )                    
+                )
             )
         )
     )
@@ -115,21 +143,25 @@ def server(input, output, session):
         return df
     
     @output
-    @render.ui
-    @reactive.event(input.symbols)
+    @render.ui    
     def range_date_picker():        
         
-        start_ = fetch_and_clean().index[0].strftime("%Y-%m-%d")
-        end_ = fetch_and_clean().index[-1].strftime("%Y-%m-%d")
+        if input.lock_dates():
+            with reactive.isolate():
+                start_ = fetch_and_clean().index[0].strftime("%Y-%m-%d")
+                end_ = fetch_and_clean().index[-1].strftime("%Y-%m-%d")               
+        else:
+            start_ = fetch_and_clean().index[0].strftime("%Y-%m-%d")
+            end_ = fetch_and_clean().index[-1].strftime("%Y-%m-%d")               
         
         return ui.input_date_range(
             id="date_range",
-            label="Pick Dates:",            
+            label="Pick Dates:",                        
             start=start_,
             end=end_,
             min=start_,
             max=end_,
-            separator=" to ",
+            separator="to",
             weekstart=1,
             language="gb"
         )       
@@ -166,7 +198,7 @@ def server(input, output, session):
     
     @output
     @render.plot
-    @reactive.event(input.go)
+    #@reactive.event(input.go)
     def plot_undiv():
 
         _, ax = plt.subplots()        
@@ -180,9 +212,9 @@ def server(input, output, session):
        
     @output
     @render.ui
-    @reactive.event(input.blending_type)
+    #@reactive.event(input.blending_type)
     def target_vol():
-        if input.blending_type()!="ew":
+        if input.blending_type()=="iv":
             tgt_gui = ui.input_numeric(
                 id="port_vol",
                 label="Tune Volatility Target",
@@ -196,15 +228,16 @@ def server(input, output, session):
 
     @output
     @render.ui    
-    @reactive.event(input.port_vol, ignore_none=True)
+    #@reactive.event(input.port_vol, ignore_none=False)
     def target_vol_text():
-        if input.blending_type()!="ew":
+        if input.blending_type()=="iv":
             return ui.markdown(
             f"""            
             Current portfolio volatility set to {input.port_vol():.1f}%
             """
         )
-    
+        return None
+
     @output
     @render.ui
     def text_div():
@@ -219,7 +252,7 @@ def server(input, output, session):
 
     @output
     @render.plot
-    @reactive.event(input.go)
+    #@reactive.event(input.go)
     def plot_div():        
 
         _, ax = plt.subplots()                       
@@ -240,42 +273,52 @@ def server(input, output, session):
 
     @output
     @render.table
-    @reactive.event(input.go)
+    #@reactive.event(input.go)
     def alloc_div():
-        iv_weights = 10000*iv_factor_weigths().to_frame(name="Allocation")
-        iv_weights /= iv_weights.shape[0]
+        weights = 10000*iv_factor_weigths().to_frame(name="Allocation")
+        weights /= weights.shape[0]
         
-        if input.blending_type()=="iv":
-            return (
-                iv_weights    
-                .reset_index()            
-                .rename(columns={"index": "Currency"})
-                .style
-                .set_table_attributes(
-                    'class="dataframe shiny-table table w-auto"'
-                )
-                .format({"Allocation": "{:.0f}€"})
-                .hide(axis="index")          
-                .highlight_min(subset="Allocation",color="orange")
-                .highlight_max(subset="Allocation",color="green")              
+        if input.blending_type()=="ew":
+            weights = pd.DataFrame(
+                10000/weights.shape[0],
+                index=weights.index,
+                columns=["Allocation"]
             )
-        return None
+            
+        return (
+            weights    
+            .reset_index()            
+            .rename(columns={"index": "Currency"})
+            .style
+            .set_table_attributes(
+                'class="dataframe shiny-table table w-auto"'
+            )
+            .format({"Allocation": "{:.0f}€"})
+            .hide(axis="index")                      
+        )
 
     @output
     @render.plot
-    @reactive.event(input.go)
+    #@reactive.event(input.go)
     def pie_alloc_div():
         omega=iv_factor_weigths()
         y_fx = omega.values/len(omega)
         y = np.append(y_fx,1-np.sum(y_fx))
         
+        if input.blending_type()=="ew":
+            y=np.array([1]*len(omega))/len(omega)
+
         curncies = omega.index.to_list()
-        curncies.extend(["EUR"])              
+        
+        if input.blending_type()=="iv":
+            curncies.extend(["EUR"])              
 
         _, ax = plt.subplots(figsize=(10,7))
 
         explode_ = [0]*len(curncies)
-        explode_[-1] = 0.1
+        
+        if input.blending_type()=="iv":
+            explode_[-1] = 0.1
 
         ax.pie(y,
             labels=curncies,
@@ -283,6 +326,6 @@ def server(input, output, session):
             explode=explode_,
             shadow=True,            
         )
-        ax.set_title("Volatility Targetting Portfolio Components")
+
 
 app = App(app_ui, server)

@@ -25,3 +25,4 @@ stevedore
 yfinance==0.1.87
 matplotlib==3.5.2
 shiny==0.2.9
+Jinja2
