@@ -51,8 +51,12 @@ We are working on expanding the coverage of the repo. Areas under active develop
       * LambdaMART (LightGBM Pairwise LETOR)
       
   * Backtesting And Conclusions: Empirical evidence supporting Currency Screening methodologies based on LETOR Algos.
-  * Frontend:
-      * `streamlit`-based Financial KID (Key Information Dashboard)
+  * Frontends:
+      * `streamlit`-based:
+      [`fx_visor`](https://falken1983-fx-letor-streamlitfx-visor-u4ngi5.streamlit.app/) (Still in `alpha`)
+      
+      * `shiny`-based: 
+      [`fx_shinyvisor`](https://falken1983.shinyapps.io/fx_shinyvisor)
 
 ## Notebooks
 
