@@ -44,7 +44,7 @@ quotes_tidy = quotes.melt(
         ignore_index=False
 ).reset_index().sort_values(by=["date","code"])    
 
-with open("secrets.json","r") as f:
+with open(PYSCRIPT_PATH + "/secrets.json","r") as f:
     data_json = json.load(f)   
 
 secrets = data_json["sql_authentication"]
