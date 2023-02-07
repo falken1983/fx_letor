@@ -25,11 +25,12 @@ def config():
                 "ticker": ["EUR"+code+"=X" for code in fx_codes]}
     
 print(config()["codes"])
-# *Extract* from Y! EOD Data (23pm GMT+1, 17pm EST)
+# *Extract* from Y! EOD Data (23 GMT+1 = 17 EST)
 quotes = yf.download(config()["ticker"], period="1d")["Adj Close"]
 
 # *Transform*: Needed transforms for Inserting in db
 # recoding
+quotes = 1/quotes
 quotes.columns = [
     iso_code.replace("EUR","").replace("=X","") for iso_code in quotes.columns
 ]
