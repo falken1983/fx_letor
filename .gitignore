@@ -1,5 +1,6 @@
 __pycache__
 __init__.py
+.ipynb_checkpoints
 secrets.json
 
 *.csv
