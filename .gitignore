@@ -1,4 +1,5 @@
 __pycache__
+.vscode
 __init__.py
 .ipynb_checkpoints
 secrets.json
