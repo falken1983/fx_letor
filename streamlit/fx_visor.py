@@ -32,7 +32,7 @@ for land in cfg["currencies"].keys():
 tickers = ["EUR"+currency+"=X" for currency in countries]
 
 # caching full-data for optimized responsiveness
-@st.cache
+@st.cache_data
 def fetch_and_clean(tickers):
     return 1/yf.download(tickers)["Close"].dropna(how="any")
 
