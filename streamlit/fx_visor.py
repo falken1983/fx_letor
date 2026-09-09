@@ -19,88 +19,100 @@ CONFIG_FILE = "config.yaml"
 FULLPATH_CONFIG_FILE = PATH_STREAMLIT_APP + CONFIG_FILE
 
 try:
-    with open(FULLPATH_CONFIG_FILE,"r") as configfile:
-        cfg=yaml.safe_load(configfile)
+    with open(FULLPATH_CONFIG_FILE, "r") as configfile:
+        cfg = yaml.safe_load(configfile)
 except:
-    with open(CONFIG_FILE,"r") as configfile:
-        cfg=yaml.safe_load(configfile)
+    with open(CONFIG_FILE, "r") as configfile:
+        cfg = yaml.safe_load(configfile)
 
 countries = list()
 for land in cfg["currencies"].keys():
     countries.extend(cfg["currencies"][land])
 
-tickers = ["EUR"+currency+"=X" for currency in countries]
+tickers = ["EUR" + currency + "=X" for currency in countries]
+
 
 # caching full-data for optimized responsiveness
 @st.cache_data
 def fetch_and_clean(tickers):
-    return 1/yf.download(tickers)["Close"].dropna(how="any")
+    return 1 / yf.download(tickers)["Close"].dropna(how="any")
+
 
 # A convenient way for rendering decorators and enhancing effects
 def rendering():
     with st.spinner("Rendering..."):
         time.sleep(0.25)
 
-#adhoc renaming for plotting
+
+# adhoc renaming for plotting
 fx_prices = fetch_and_clean(tickers)
-fx_prices.columns = [x.replace("EUR","").replace("=X","") for x in fx_prices.columns.tolist()]
+if fx_prices.empty:
+    st.error("No FX data could be retrieved. Check your connection or ticker list.")
+    st.stop()
+fx_prices.columns = [
+    x.replace("EUR", "").replace("=X", "") for x in fx_prices.columns.tolist()
+]
 
 # max time-window
 ts_min, ts_max = fx_prices.index[0], fx_prices.index[-1]
 
 # control panel
 with st.sidebar:
-    
-    #st.title("Control Panel")
+    # st.title("Control Panel")
     symbols = st.multiselect(
-        label="Please Choose Currency:",
-        options=countries,
-        default="USD"
+        label="Please Choose Currency:", options=countries, default="USD"
     )
 
-    start_date = st.date_input( # start date 
+    start_date = st.date_input(  # start date
         "Choose Start Date:",
-        min_value = datetime.strptime(ts_min.strftime('%Y-%m-%d'), '%Y-%m-%d'),
-        max_value = datetime.strptime(ts_max.strftime('%Y-%m-%d'), '%Y-%m-%d'),        
-        value = datetime.strptime(ts_min.strftime('%Y-%m-%d'), '%Y-%m-%d')
-        )
+        min_value=datetime.strptime(ts_min.strftime("%Y-%m-%d"), "%Y-%m-%d"),
+        max_value=datetime.strptime(ts_max.strftime("%Y-%m-%d"), "%Y-%m-%d"),
+        value=datetime.strptime(ts_min.strftime("%Y-%m-%d"), "%Y-%m-%d"),
+    )
 
-    end_date = st.date_input( # end date
+    end_date = st.date_input(  # end date
         "Choose End Date:",
-        min_value = start_date,
-        max_value = datetime.strptime(ts_max.strftime('%Y-%m-%d'), '%Y-%m-%d'),        
-        value = datetime.strptime(ts_max.strftime('%Y-%m-%d'), '%Y-%m-%d')
-    )        
-    #refreshed = False        
+        min_value=start_date,
+        max_value=datetime.strptime(ts_max.strftime("%Y-%m-%d"), "%Y-%m-%d"),
+        value=datetime.strptime(ts_max.strftime("%Y-%m-%d"), "%Y-%m-%d"),
+    )
+    # refreshed = False
 
-    st.title ("FX-Portfolio Diversification")
-    opciones = st.radio('Choose Currency blending scheme:', ['Equally Weighted', 'Inverse-Volatility Weighted'])
+    st.title("FX-Portfolio Diversification")
+    opciones = st.radio(
+        "Choose Currency blending scheme:",
+        ["Equally Weighted", "Inverse-Volatility Weighted"],
+    )
     ew = False
 
     if opciones == "Equally Weighted":
         ew = True
     else:
         target_vol = st.number_input(
-            'Insert target portfolio volatility',
+            "Insert target portfolio volatility",
             min_value=1.0,
             max_value=15.0,
             step=0.25,
-            value=5.0
-            )
-        st.write(f'Current portfolio volatility is set to {target_vol}%')
-        target_vol /= 100            
+            value=5.0,
+        )
+        st.write(f"Current portfolio volatility is set to {target_vol}%")
+        target_vol /= 100
 
     with st.form("refresh"):
-        #st.title("Run FX Dashboard")          
-        refreshed= st.form_submit_button("Submit Changes")
-        
-    if refreshed:            
-        st.success("Succesfully Updated",icon="💸")
+        # st.title("Run FX Dashboard")
+        refreshed = st.form_submit_button("Submit Changes")
+
+    if refreshed:
+        st.success("Succesfully Updated", icon="💸")
     else:
-        st.warning("Awaiting Submit Button...",icon="⌛")
-        
+        st.warning("Awaiting Submit Button...", icon="⌛")
+
 # Common DataFrames
-norm_fx_px = 10000*fx_prices[start_date:end_date][symbols]/fx_prices[start_date:end_date][symbols].iloc[0,:]
+norm_fx_px = (
+    10000
+    * fx_prices[start_date:end_date][symbols]
+    / fx_prices[start_date:end_date][symbols].iloc[0, :]
+)
 fx_px = fx_prices[start_date:end_date][symbols]
 
 # Main Layout
@@ -108,85 +120,95 @@ st.header("📈 FX Visor")
 tab1, tab2 = st.tabs(["Nondiversified", "Diversified"])
 
 with tab1:
-    st.header("Nondiversified")    
+    st.header("Nondiversified")
 
     if refreshed:
         rendering()
         fig, ax = plt.subplots()
         ax.plot(norm_fx_px)
-        #ax.plot(sdata_yearacum[cities])
+        # ax.plot(sdata_yearacum[cities])
         plt.tick_params(rotation=45)
-        ax.xaxis.set_major_formatter(DateFormatter('%Y-%b'))
+        ax.xaxis.set_major_formatter(DateFormatter("%Y-%b"))
         ax.set_ylabel("Cumulative Wealth (€)")
         ax.legend(symbols, frameon=False)
-        plt.grid(visible=True, axis='y')
+        plt.grid(visible=True, axis="y")
         # st decorations
         st.markdown("#### Hypothetical Growth of 10,000€")
         st.write("Individual (nondiversified) growth for each currency chosen.")
-        st.pyplot(fig)        
+        st.pyplot(fig)
 
 with tab2:
-    st.header("Diversified")    
-    col1, col2 = st.columns([3,1])
-    
-    if refreshed:          
+    st.header("Diversified")
+    col1, col2 = st.columns([3, 1])
+
+    if refreshed:
         # Solomonic Blending
-        fx_port_cumret = 10000*(1+norm_fx_px.pct_change().mean(axis=1)).cumprod()        
-        fig, ax = plt.subplots()        
+        fx_port_cumret = 10000 * (1 + norm_fx_px.pct_change().mean(axis=1)).cumprod()
+        fig, ax = plt.subplots()
         rendering()
-        if ew:                               
-            with col1:                
+        if ew:
+            with col1:
                 # EW Blending
                 ax.plot(norm_fx_px, alpha=0.15)
                 ax.plot(fx_port_cumret, color="black")
                 plt.tick_params(rotation=45)
-                ax.xaxis.set_major_formatter(DateFormatter('%Y-%b'))
+                ax.xaxis.set_major_formatter(DateFormatter("%Y-%b"))
                 ax.set_ylabel("Cumulative Wealth (€)")
-                plt.grid(visible=True, axis='y')
-                            
-                st.markdown("#### Hypothetical Growth of 10,000€")                            
-                curncy_components = f'{", ".join(symbols)}'            
-                st.markdown(f"{opciones} Portfolio composed by " + curncy_components)
-                st.pyplot(fig)        
-            with col2:                
-                st.markdown(f"#### Total Return")
-                st.metric(
-                    label="Net Gains",
-                    value=f"{fx_port_cumret.iloc[-1]-10000:.2f}€",
-                    delta=f"{100*(1e-4*fx_port_cumret.iloc[-1]-1):.1f}%"
-                )        
-        else:   # Invers-Vol Blending                     
-            with col1:                                
-                target_vol/=np.sqrt(252)
-                factors = target_vol/fx_px.pct_change().std()
-                factors[factors>1]=1 #DKK patology (pegged to EUR). It acts as a risk-free currency ~EUR
-                weighted_returns = factors.values.reshape(-1,1).T*fx_px.pct_change()
-                fx_iv_port_cumret = 10000*(1+weighted_returns.mean(axis=1)).cumprod()
+                plt.grid(visible=True, axis="y")
 
-                ax.plot(norm_fx_px, alpha=0.075)
-                ax.plot(fx_port_cumret, color="gray", linestyle="dotted", alpha=0.45, label="Equally Weighted")
-                ax.plot(fx_iv_port_cumret, color="black", label="Volatility Targetting")
-                plt.tick_params(rotation=45)
-                ax.xaxis.set_major_formatter(DateFormatter('%Y-%b'))
-                ax.set_ylabel("Cumulative Wealth (€)")
-                plt.grid(visible=True, axis='y')
-                ax.legend(frameon=False)
-            
-                st.markdown("#### Hypothetical Growth of 10,000€")                            
-                curncy_components = f'{", ".join(symbols)}'            
+                st.markdown("#### Hypothetical Growth of 10,000€")
+                curncy_components = f"{', '.join(symbols)}"
                 st.markdown(f"{opciones} Portfolio composed by " + curncy_components)
                 st.pyplot(fig)
-            with col2:                
+            with col2:
                 st.markdown(f"#### Total Return")
                 st.metric(
                     label="Net Gains",
-                    value=f"{fx_iv_port_cumret.iloc[-1]-10000:.2f}€",
-                    delta=f"{100*(1e-4*fx_iv_port_cumret.iloc[-1]-1):.1f}%"
+                    value=f"{fx_port_cumret.iloc[-1] - 10000:.2f}€",
+                    delta=f"{100 * (1e-4 * fx_port_cumret.iloc[-1] - 1):.1f}%",
                 )
-                
-                st.markdown("#### Distribution")                                
-                iv_weights = 10000*factors.to_frame(name="Allocation")
-                iv_weights /= iv_weights.shape[0]                                                
+        else:  # Invers-Vol Blending
+            with col1:
+                target_vol /= np.sqrt(252)
+                factors = target_vol / fx_px.pct_change().std()
+                factors[factors > 1] = (
+                    1  # DKK patology (pegged to EUR). It acts as a risk-free currency ~EUR
+                )
+                weighted_returns = factors.values.reshape(-1, 1).T * fx_px.pct_change()
+                fx_iv_port_cumret = (
+                    10000 * (1 + weighted_returns.mean(axis=1)).cumprod()
+                )
+
+                ax.plot(norm_fx_px, alpha=0.075)
+                ax.plot(
+                    fx_port_cumret,
+                    color="gray",
+                    linestyle="dotted",
+                    alpha=0.45,
+                    label="Equally Weighted",
+                )
+                ax.plot(fx_iv_port_cumret, color="black", label="Volatility Targetting")
+                plt.tick_params(rotation=45)
+                ax.xaxis.set_major_formatter(DateFormatter("%Y-%b"))
+                ax.set_ylabel("Cumulative Wealth (€)")
+                plt.grid(visible=True, axis="y")
+                ax.legend(frameon=False)
+
+                st.markdown("#### Hypothetical Growth of 10,000€")
+                curncy_components = f"{', '.join(symbols)}"
+                st.markdown(f"{opciones} Portfolio composed by " + curncy_components)
+                st.pyplot(fig)
+            with col2:
+                st.markdown(f"#### Total Return")
+                st.metric(
+                    label="Net Gains",
+                    value=f"{fx_iv_port_cumret.iloc[-1] - 10000:.2f}€",
+                    delta=f"{100 * (1e-4 * fx_iv_port_cumret.iloc[-1] - 1):.1f}%",
+                )
+
+                st.markdown("#### Distribution")
+                iv_weights = 10000 * factors.to_frame(name="Allocation")
+                iv_weights /= iv_weights.shape[0]
                 st.dataframe(
-                    iv_weights.style.format({"Allocation": "{:.0f}€"}),             
+                    iv_weights.style.format({"Allocation": "{:.0f}€"}),
                 )
