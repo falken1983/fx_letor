@@ -1,0 +1,14 @@
+streamlit
+numpy==1.26.4
+pandas==2.2.3
+matplotlib==3.9.4
+yfinance==0.2.54
+pyyaml==6.0.2
+requests==2.32.3
+multitasking==0.0.11
+urllib3==2.3.0
+certifi==2025.1.31
+pytz==2025.1
+tzdata==2025.1
+python-dateutil==2.9.0post0
+six==1.17.0
